@@ -50,6 +50,7 @@ DEFAULT_SLUGS = [
     "orders-fbs",
     "orders-fbw",
     "promotion",
+    "rates",
     "reports",
 ]
 
