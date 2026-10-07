@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+
+# Локальный вывод (база — на QNAP через DOCS_OUT_ROOT)
+md/
+
+# Профиль Chrome с куками Qrator — не пушим
+.chrome-profile/

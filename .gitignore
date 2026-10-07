@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Локальный вывод парсеров (база документации — на QNAP через DOCS_OUT_ROOT)
+md/
+
+# Логи прогонов оркестратора, скачанные страницы
+*.log
+*.html
+*.tmp
+
+# Профили Chrome с куками антиботов (Ozon, Деловые Линии)
+.chrome-profile/
+
+# Распакованный tarball репо Яндекса, черновики разведки WB
+_repo/
+_recon/
+
+# Служебное состояние oh-my-claudecode
+.omc/
