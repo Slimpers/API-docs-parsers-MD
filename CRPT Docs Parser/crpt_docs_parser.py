@@ -215,7 +215,10 @@ def parse_document(doc_slug: str, url: str) -> list[dict]:
     soup = BeautifulSoup(r.content, "html.parser")
     root = _content_root(soup)
 
-    headings = [h for h in root.find_all(HEADING_TAGS)]
+    # Виджет отзыва «Помогите нам стать лучше» есть на каждой странице. На странице
+    # без своих заголовков он был единственным заголовком, и текст страницы терялся.
+    headings = [h for h in root.find_all(HEADING_TAGS)
+                if _clean(h.get_text(" ", strip=True)) != "Помогите нам стать лучше"]
     if not headings:
         # Страница без заголовков (напр. одна большая таблица) — сохраняем целиком.
         body_md = _collapse(_node_md(root))
