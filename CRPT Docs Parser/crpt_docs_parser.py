@@ -241,6 +241,10 @@ def parse_document(doc_slug: str, url: str) -> list[dict]:
 def write_sections(doc_slug: str, url: str, sections: list[dict]) -> int:
     out_dir = OUT_ROOT / doc_slug
     out_dir.mkdir(parents=True, exist_ok=True)
+    # Номера секций сдвигаются, заголовки «Что нового в v.X» меняются каждый релиз —
+    # без чистки старые файлы копятся рядом с новыми. Зовётся только после успешного разбора.
+    for old in out_dir.glob("[0-9][0-9][0-9]_*.md"):
+        old.unlink()
     today = datetime.now().strftime("%Y-%m-%d")
 
     index_lines = [f"# {doc_slug} — оглавление", "", f"Источник: {url}", f"Извлечено: {today}", ""]
