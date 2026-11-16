@@ -24,11 +24,12 @@ r"""Обновление общей базы документации MP API н�
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -192,8 +193,23 @@ def main() -> int:
         action="store_true",
         help="запускать по очереди с выводом в консоль (по умолчанию — параллельно)",
     )
+    ap.add_argument("--result-file", type=Path, help="записать итог запуска в JSON по этому пути")
     args = ap.parse_args()
+    code = 1
+    try:
+        code = _update(args)
+        return code
+    finally:
+        if args.result_file:
+            # Файл читается дашбордом и после перезапуска родительского процесса.
+            temp = args.result_file.with_suffix(".json.tmp")
+            temp.write_text(json.dumps({"exit_code": code,
+                                        "finished": datetime.now(timezone.utc).isoformat()}),
+                            encoding="utf-8")
+            temp.replace(args.result_file)
 
+
+def _update(args: argparse.Namespace) -> int:
     selected = [s.lower() for s in args.parsers]
     unknown = [s for s in selected if s not in PARSERS]
     if unknown:

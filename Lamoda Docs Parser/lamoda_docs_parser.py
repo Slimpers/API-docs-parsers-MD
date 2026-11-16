@@ -1132,6 +1132,7 @@ def crawl() -> dict:
     queue: deque[str] = deque([API_ROOT])
     visited: set[str] = set()
 
+    failed = []
     print(f"[la] обход дерева от {API_ROOT}")
     while queue:
         url = queue.popleft()
@@ -1143,6 +1144,7 @@ def crawl() -> dict:
         html = fetch_text(url)
         if html is None:
             print(f"[la] пропуск (не загрузилось): {url}")
+            failed.append(url)
             continue
 
         # 1. Swagger-страница со спекой
@@ -1201,7 +1203,7 @@ def crawl() -> dict:
     print(f"[la] обход завершён: {len(listings)} разделов, "
           f"{len(articles)} статей, {len(specs)} спек")
     return {"articles": articles, "listings": listings,
-            "specs": specs, "nav_title": nav_title}
+            "specs": specs, "nav_title": nav_title, "failed": failed}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1404,16 +1406,17 @@ def build_specs(data: dict) -> dict[str, dict]:
         except Exception as e:
             print(f"[la] спека {sp['slug']}: ошибка YAML — {e}")
             continue
-        if not isinstance(spec, dict):
-            print(f"[la] спека {sp['slug']}: не похоже на OpenAPI — пропуск")
+        if not isinstance(spec, dict) or not spec.get("paths"):
+            print(f"[la] спека {sp['slug']}: нет путей OpenAPI — пропуск")
             continue
         spec = _yaml_to_jsonable(spec)
         n = build_openapi(spec, sp["slug"], source_url=sp["url"])
+        if not n:
+            continue
         built[sp["slug"]] = {
             "spec": spec, "url": sp["url"], "ops": n,
             "title": (spec.get("info") or {}).get("title") or sp["title"],
         }
-    write_api_index(built)
     return built
 
 
@@ -1526,9 +1529,15 @@ def _read_existing_sections() -> list[dict]:
     return sections
 
 
-def run(mode: str = "all") -> None:
+def run(mode: str = "all") -> int:
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     data = crawl()
+    if data["failed"]:
+        print(f"[la] не загрузилось страниц: {len(data['failed'])}", file=sys.stderr)
+        return 1
+    if mode in ("all", "articles") and not data["articles"]:
+        print("[la] не найдены статьи", file=sys.stderr)
+        return 1
 
     spec_built_map: dict[str, str] = {
         sp["url"]: sp["slug"] for sp in data["specs"]
@@ -1538,10 +1547,14 @@ def run(mode: str = "all") -> None:
     sections: list[dict] | None = None
     built: dict[str, dict] | None = None
 
-    if mode in ("all", "articles"):
-        sections = build_articles(data, url_map)
     if mode in ("all", "api"):
         built = build_specs(data)
+        if not built or any(sp["slug"] not in built for sp in data["specs"]):
+            print("[la] не удалось обновить все спецификации OpenAPI", file=sys.stderr)
+            return 1
+        write_api_index(built)
+    if mode in ("all", "articles"):
+        sections = build_articles(data, url_map)
 
     # для корневого индекса подхватываем недостающую часть с диска
     if sections is None:
@@ -1551,18 +1564,19 @@ def run(mode: str = "all") -> None:
 
     write_global_index(sections, built)
     print(f"[la] готово. Результат в {OUT_ROOT}")
+    return 0
 
 
-def main() -> None:
+def main() -> int:
     arg = (sys.argv[1].lower() if len(sys.argv) > 1 else "all")
     if arg in ("-h", "--help"):
         print(__doc__)
-        return
+        return 0
     if arg not in ("all", "articles", "api"):
-        print(f"Неизвестный режим '{arg}'. Допустимо: all | articles | api")
-        return
-    run(arg)
+        print(f"Неизвестный режим '{arg}'. Допустимо: all | articles | api", file=sys.stderr)
+        return 2
+    return run(arg)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

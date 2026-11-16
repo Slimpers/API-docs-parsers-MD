@@ -1060,7 +1060,8 @@ def run(slug: str, ref: str, keep_repo: bool) -> None:
     n_schemas = len((spec.get("components") or {}).get("schemas") or {})
     print(f"[ya] bundled: {n_paths} paths, {n_schemas} schemas "
           f"(took {time.time() - t0:.1f}s)")
-    build(spec, slug)
+    if not build(spec, slug):
+        raise RuntimeError("Спецификация Яндекс Маркета не содержит операций")
     write_root_index([(slug, spec)])
     if not keep_repo and REPO_DIR.exists():
         shutil.rmtree(REPO_DIR)

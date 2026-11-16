@@ -958,7 +958,7 @@ def write_root_index(slug_stats: list[tuple[str, dict]]) -> None:
     (OUT_ROOT / "_README.md").write_text("".join(out), encoding="utf-8")
 
 
-def run(slugs: Iterable[str]) -> None:
+def run(slugs: Iterable[str]) -> int:
     OUT_ROOT.mkdir(exist_ok=True)
     PROFILE_DIR.mkdir(exist_ok=True)
     slug_stats: list[tuple[str, dict]] = []
@@ -979,18 +979,25 @@ def run(slugs: Iterable[str]) -> None:
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
 
         total = 0
+        failed = []
         for slug in slugs:
             spec = fetch_spec(page, slug)
-            if spec is None:
+            cnt = build_for_slug(spec, slug) if spec is not None else 0
+            if not cnt:
+                failed.append(slug)
                 continue
-            cnt = build_for_slug(spec, slug)
             total += cnt
             slug_stats.append((slug, spec))
-        write_root_index(slug_stats)
-        print(f"[oz] done. total endpoints: {total}")
         ctx.close()
+    if failed or not total:
+        print(f"[oz] не обновлены разделы: {', '.join(failed) or 'нет операций'}",
+              file=sys.stderr)
+        return 1
+    write_root_index(slug_stats)
+    print(f"[oz] done. total endpoints: {total}")
+    return 0
 
 
 if __name__ == "__main__":
     args = sys.argv[1:] or DEFAULT_SLUGS
-    run(args)
+    sys.exit(run(args))

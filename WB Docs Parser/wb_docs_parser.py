@@ -692,7 +692,7 @@ def write_root_index(slug_stats: list[tuple[str, dict]]) -> None:
     (OUT_ROOT / "_README.md").write_text("".join(out), encoding="utf-8")
 
 
-def run(slugs: Iterable[str]) -> None:
+def run(slugs: Iterable[str]) -> int:
     OUT_ROOT.mkdir(exist_ok=True)
     slug_stats: list[tuple[str, dict]] = []
     with Stealth().use_sync(sync_playwright()) as p:
@@ -709,20 +709,27 @@ def run(slugs: Iterable[str]) -> None:
         page = ctx.new_page()
 
         total = 0
+        failed = []
         for slug in slugs:
             state = fetch_state(page, slug)
-            if state is None:
+            cnt = build_for_slug(state, slug) if state is not None else 0
+            if not cnt:
+                failed.append(slug)
                 continue
-            cnt = build_for_slug(state, slug)
             total += cnt
             data = ((state or {}).get("spec") or {}).get("data") or {}
             if isinstance(data, dict):
                 slug_stats.append((slug, data))
-        write_root_index(slug_stats)
-        print(f"[wb] done. total endpoints: {total}")
         browser.close()
+    if failed or not total:
+        print(f"[wb] не обновлены разделы: {', '.join(failed) or 'нет операций'}",
+              file=sys.stderr)
+        return 1
+    write_root_index(slug_stats)
+    print(f"[wb] done. total endpoints: {total}")
+    return 0
 
 
 if __name__ == "__main__":
     args = sys.argv[1:] or DEFAULT_SLUGS
-    run(args)
+    sys.exit(run(args))
