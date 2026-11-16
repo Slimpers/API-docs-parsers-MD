@@ -67,7 +67,7 @@ OUT_ROOT = Path(os.environ["DOCS_OUT_ROOT"]) if os.environ.get("DOCS_OUT_ROOT") 
 OUT_ARTICLES = OUT_ROOT / "articles"
 OUT_API = OUT_ROOT / "api"
 
-REQUEST_DELAY = 0.25  # пауза между запросами, чтобы не злить сервер
+REQUEST_DELAY = 2.0  # Qrator возвращает 503 при более частых запросах за один сеанс
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -816,7 +816,7 @@ def fetch_text(url: str, tries: int = 3) -> str | None:
             print(f"[la] {url} -> HTTP {r.status_code}")
         except Exception as e:
             print(f"[la] {url} ошибка ({attempt + 1}/{tries}): {e}")
-        time.sleep(2)
+        time.sleep(REQUEST_DELAY)
     return None
 
 
